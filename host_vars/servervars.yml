@@ -1,0 +1,3 @@
+ansible_host: 52.174.161.155
+ansible_user: adminuser
+ansible_ssh_private_key_file: ~/.ssh/emtfazurekey
