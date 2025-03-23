@@ -1,2 +1,5 @@
-# Ignore sensitive host variables
+## Ignore sensitive host variables
 host_vars/serversvars.yml
+
+## Ignore vault pass
+.vault_pass
