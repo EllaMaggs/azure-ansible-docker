@@ -1,0 +1,35 @@
+---
+- name: Test Docker and Apache HTTPD container
+  hosts: all
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Check if Docker is installed
+      command: docker --version
+      register: docker_version
+      changed_when: false
+      failed_when: false
+
+    - name: Display Docker version
+      debug:
+        var: docker_version.stdout_lines
+
+    - name: Check if Apache container is running
+      shell: docker ps --filter "name=apache-httpd" --format "{{.Status}}"
+      register: container_status
+      changed_when: false
+
+    - name: Display container status
+      debug:
+        var: container_status.stdout_lines
+
+    - name: Test web server response
+      uri:
+        url: http://localhost
+        return_content: yes
+      register: webpage
+      failed_when: false
+
+    - name: Display web server response
+      debug:
+        var: webpage.status 

@@ -3,3 +3,27 @@ host_vars/serversvars.yml
 
 ## Ignore vault pass
 .vault_pass
+
+## Ignore Terraform state files
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+
+## Ignore SSH keys and sensitive files
+*.pem
+*.key
+*.pub
+emtfazurekey*
+id_rsa*
+id_ed25519*
+
+## Ignore environment-specific files
+.env
+.env.*
+*.env
+
+## Ignore Ansible sensitive files
+ansible/inventory.ini
+ansible/host_vars/*.yml
+!ansible/host_vars/*.yml.template
