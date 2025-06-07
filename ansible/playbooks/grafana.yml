@@ -1,0 +1,105 @@
+---
+- name: Deploy Grafana on Docker
+  hosts: grafana
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+        state: present
+        update_cache: yes
+
+    - name: Add Docker GPG apt Key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu jammy stable
+        state: present
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: yes
+
+    - name: Install Docker Module for Python
+      pip:
+        name: docker
+
+    - name: Create directory for Grafana data
+      file:
+        path: /opt/grafana-data
+        state: directory
+        mode: '0777'
+        owner: "472"
+        group: "472"
+
+    - name: Remove existing Grafana container (if it exists)
+      shell: docker rm -f grafana || true
+
+    - name: Pull latest Grafana image
+      shell: docker pull grafana/grafana:latest
+
+    - name: Run Grafana container
+      shell: |
+        docker run -d \
+          --name grafana \
+          -p 3000:3000 \
+          -v /opt/grafana-data:/var/lib/grafana \
+          --user "472" \
+          --restart always \
+          grafana/grafana:latest
+
+    - name: Check container status
+      shell: docker ps -a | grep grafana
+      register: container_status
+      changed_when: false
+
+    - name: Display container status
+      debug:
+        var: container_status.stdout_lines
+
+    - name: Check container logs
+      shell: docker logs grafana
+      register: container_logs
+      changed_when: false
+
+    - name: Display container logs
+      debug:
+        var: container_logs.stdout_lines
+
+    - name: Wait for Grafana to start
+      shell: |
+        #!/bin/bash
+        for i in $(seq 1 60); do
+          if curl -s http://localhost:3000/api/health > /dev/null; then
+            exit 0
+          fi
+          echo "Waiting for Grafana to start... (attempt $i of 60)"
+          sleep 5
+        done
+        exit 1
+      args:
+        executable: /bin/bash
+      register: result
+      changed_when: false
+      failed_when: result.rc != 0
+
+    - name: Display Grafana status
+      debug:
+        msg: "Grafana is now running and accessible at http://{{ ansible_host }}:3000" 
