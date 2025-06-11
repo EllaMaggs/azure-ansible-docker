@@ -1,0 +1,48 @@
+---
+- name: Deploy Node Exporter on Docker
+  hosts: ansible-docker-vm
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Remove existing Node Exporter container (if it exists)
+      shell: docker rm -f node-exporter || true
+
+    - name: Pull latest Node Exporter image
+      shell: docker pull prom/node-exporter:latest
+
+    - name: Run Node Exporter container
+      shell: |
+        docker run -d \
+          --name node-exporter \
+          --network monitoring \
+          -p 9100:9100 \
+          -v /proc:/host/proc:ro \
+          -v /sys:/host/sys:ro \
+          -v /:/rootfs:ro \
+          --restart always \
+          prom/node-exporter:latest \
+          --path.procfs=/host/proc \
+          --path.sysfs=/host/sys \
+          --collector.filesystem.mount-points-exclude="^/(sys|proc|dev|host|etc)($$|/)"
+
+    - name: Wait for Node Exporter to start
+      shell: |
+        #!/bin/bash
+        for i in $(seq 1 30); do
+          if curl -s http://localhost:9100/metrics > /dev/null; then
+            exit 0
+          fi
+          echo "Waiting for Node Exporter to start... (attempt $i of 30)"
+          sleep 2
+        done
+        exit 1
+      args:
+        executable: /bin/bash
+      register: result
+      changed_when: false
+      failed_when: result.rc != 0
+
+    - name: Display Node Exporter status
+      debug:
+        msg: "Node Exporter is now running and accessible at http://{{ ansible_host }}:9100/metrics" 

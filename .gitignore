@@ -14,7 +14,7 @@ terraform/.terraform.lock.hcl
 *.pem
 *.key
 *.pub
-emtfazurekey*
+azurekey*
 id_rsa*
 id_ed25519*
 

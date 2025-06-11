@@ -1,4 +1,4 @@
-[emtf-vm]
+[ansible-docker-vm]
 YOUR_VM_IP ansible_user=adminuser ansible_ssh_private_key_file=~/.ssh/YOUR_PRIVATE_KEY ansible_python_interpreter=/usr/bin/python3 
 
 [grafana]

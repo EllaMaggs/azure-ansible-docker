@@ -41,6 +41,12 @@
       pip:
         name: docker
 
+    - name: Add admin user to docker group
+      user:
+        name: adminuser
+        groups: docker
+        append: yes
+
     - name: Create directory for Grafana data
       file:
         path: /opt/grafana-data

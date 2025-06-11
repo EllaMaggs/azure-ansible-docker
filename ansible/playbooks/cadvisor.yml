@@ -1,0 +1,47 @@
+---
+- name: Deploy cAdvisor on Docker
+  hosts: ansible-docker-vm
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Remove existing cAdvisor container (if it exists)
+      shell: docker rm -f cadvisor || true
+
+    - name: Pull latest cAdvisor image
+      shell: docker pull gcr.io/cadvisor/cadvisor:latest
+
+    - name: Run cAdvisor container
+      shell: |
+        docker run -d \
+          --name cadvisor \
+          --network monitoring \
+          -p 8081:8080 \
+          -v /:/rootfs:ro \
+          -v /var/run:/var/run:ro \
+          -v /sys:/sys:ro \
+          -v /var/lib/docker/:/var/lib/docker:ro \
+          -v /dev/disk/:/dev/disk:ro \
+          --restart always \
+          gcr.io/cadvisor/cadvisor:latest
+
+    - name: Wait for cAdvisor to start
+      shell: |
+        #!/bin/bash
+        for i in $(seq 1 30); do
+          if curl -s http://localhost:8081/healthz > /dev/null; then
+            exit 0
+          fi
+          echo "Waiting for cAdvisor to start... (attempt $i of 30)"
+          sleep 2
+        done
+        exit 1
+      args:
+        executable: /bin/bash
+      register: result
+      changed_when: false
+      failed_when: result.rc != 0
+
+    - name: Display cAdvisor status
+      debug:
+        msg: "cAdvisor is now running and accessible at http://{{ ansible_host }}:8081" 

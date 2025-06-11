@@ -1,0 +1,73 @@
+---
+- name: Deploy Prometheus on Docker
+  hosts: ansible-docker-vm
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Create directory for Prometheus data
+      file:
+        path: /opt/prometheus-data
+        state: directory
+        mode: '0755'
+
+    - name: Create Prometheus configuration
+      copy:
+        dest: /opt/prometheus-data/prometheus.yml
+        content: |
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+
+          scrape_configs:
+            - job_name: 'prometheus'
+              static_configs:
+                - targets: ['prometheus:9090']
+
+            - job_name: 'node'
+              static_configs:
+                - targets: ['node-exporter:9100']
+
+            - job_name: 'cadvisor'
+              static_configs:
+                - targets: ['cadvisor:8080']
+
+    - name: Remove existing Prometheus container (if it exists)
+      shell: docker rm -f prometheus || true
+
+    - name: Pull latest Prometheus image
+      shell: docker pull prom/prometheus:latest
+
+    - name: Create Docker network for monitoring
+      shell: docker network create monitoring || true
+
+    - name: Run Prometheus container
+      shell: |
+        docker run -d \
+          --name prometheus \
+          --network monitoring \
+          -p 9090:9090 \
+          -v /opt/prometheus-data:/etc/prometheus \
+          --restart always \
+          prom/prometheus:latest
+
+    - name: Wait for Prometheus to start
+      shell: |
+        #!/bin/bash
+        for i in $(seq 1 30); do
+          if curl -s http://localhost:9090/-/healthy > /dev/null; then
+            exit 0
+          fi
+          echo "Waiting for Prometheus to start... (attempt $i of 30)"
+          sleep 2
+        done
+        exit 1
+      args:
+        executable: /bin/bash
+      register: result
+      changed_when: false
+      failed_when: result.rc != 0
+
+    - name: Display Prometheus status
+      debug:
+        msg: "Prometheus is now running and accessible at http://{{ ansible_host }}:9090" 
