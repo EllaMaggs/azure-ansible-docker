@@ -4,7 +4,7 @@
 [![Ansible](https://img.shields.io/badge/Ansible-%231A1918.svg?logo=ansible&logoColor=white)](https://www.ansible.com)
 [![Docker](https://img.shields.io/badge/Docker-%232496ED.svg?logo=docker&logoColor=white)](https://www.docker.com)
 
-This project uses Terraform, Ansible, and Docker to deploy a containerized Apache HTTPD web server on an Azure VM. Terraform provisions the VM and networking resources declaratively, Ansible automates Docker installation and container setup via SSH, and Docker runs the web server in a consistent, isolated environment. The pipeline enables automated, repeatable, and scalable infrastructure deployment.
+This project uses Terraform, Ansible, and Docker to deploy a containerized Apache HTTPD web server with a comprehensive monitoring stack on Azure VMs. Terraform provisions two VMs and networking resources declaratively, Ansible automates Docker installation and container setup via SSH, and Docker runs both the web server and monitoring components (Prometheus, Node Exporter, cAdvisor) in a consistent, isolated environment. Grafana provides real-time visualization of system and container metrics. The pipeline enables automated, repeatable, and scalable infrastructure deployment with built-in observability.
 
 ## Project Structure
 
@@ -15,6 +15,9 @@ azure-ansible-docker/
 │   ├── inventory.ini         # Your configured inventory file (gitignored)
 │   ├── playbooks/            # Ansible playbooks
 │   │   ├── main.yml         # Main playbook for Docker setup
+│   │   ├── prometheus.yml   # Prometheus deployment
+│   │   ├── node_exporter.yml # Node Exporter deployment
+│   │   ├── cadvisor.yml     # cAdvisor deployment
 │   │   └── test.yml         # Test playbook for verification
 │   ├── files/               # Files to be deployed
 │   │   └── index.html      # Custom web page
@@ -23,6 +26,8 @@ azure-ansible-docker/
 │       └── servervars.yml          # Your configured variables (gitignored)
 ├── terraform/               # Terraform configuration
 │   ├── main.tf             # Main Terraform configuration
+│   │   ├── Main VM setup   # Web server and monitoring components
+│   │   └── Grafana VM setup # Visualization dashboard
 │   ├── variables.tf        # Input variables for Terraform
 │   ├── output.tf           # Output values from Terraform
 └── README.md               # Project documentation
@@ -30,15 +35,19 @@ azure-ansible-docker/
 
 ## What currently get deployed
 
-1 VM → 1 Container → 1 Website
+1 Main VM + 1 Grafana VM → Containers → 1 Website + Monitoring Stack
 
 ### 💻 Infrastructure
-- [x] **Azure VM**: Ubuntu 18.04 LTS instance
-- [x] **Network Security Group**: Restricted ports (22/8080)
+- [x] **Main VM**: Ubuntu 22.04 LTS instance (172.167.66.20)
+  - Running web server and monitoring components
+  - Multiple containers: Apache, Prometheus, Node Exporter, cAdvisor
+- [x] **Grafana VM**: Ubuntu 22.04 LTS instance (4.234.136.220)
+  - Running Grafana for metrics visualization
+- [x] **Network Security Group**: Restricted ports (22/8080/9090/9100/8081/3000)
 - [x] **Virtual Network**: Isolated subnet configuration
 
 ### 🐳 Application Stack
-- [x] **Docker**: Container runtime installed
+- [x] **Docker**: Container runtime installed on both VMs
 - [x] **Apache HTTPD**: Containerized web server
 - [x] **Static Website**: Served on port 8080
 - [x] **Persistent Storage**: Volume-mounted web content
@@ -49,9 +58,17 @@ azure-ansible-docker/
 - [x] **Container Isolation**: Process sandboxing
 - [x] **Self-Healing**: Auto-restart policy
 
+## 📊 Monitoring Stack
+
+- [x] **Prometheus**: Scrapes metrics from Node Exporter and cAdvisor
+- [x] **Node Exporter**: Collects CPU, memory, disk, and network metrics
+- [x] **cAdvisor**: Collects container resource usage metrics
+- [x] **Grafana**: Visualizations with preloaded dashboards (ID 1860, 14282)
+
+
 ## What scalability could look like
 
-10 VMs → Multiple Containers per VM → Microservices (Web, DB Cache) → Load Balanced Website
+10 VMs → Multiple Containers per VM → Microservices (Web, DB Cache) → Load Balanced Website + Customised Monitoring Stack
 
 ### 📈 Elastic Scaling
 - [ ] **Horizontal**: VM Scale Sets + Azure Load Balancer  
@@ -96,15 +113,15 @@ azure-ansible-docker/
 - [ ] Set up proper caching and compression
 
 ### 📊 Monitoring & Visibility
-- [ ] Implement Azure Monitor integration
-- [ ] Set up centralized logging with Log Analytics
+- [x] Connect Grafana to Prometheus as primary data source
+- [x] Provide real-time visibility into CPU, memory disk etc.
 - [ ] Add application performance monitoring
 - [ ] Configure alerting for critical metrics
 
 ### 🔐 Security Enhancements
 - [ ] Implement Azure Key Vault for secrets
 - [ ] Configure Azure Security Center
-- [ ] Add network security rules
+- [ ] Improve network security rules
 - [ ] Implement regular security scanning
 
 ## Contributing
